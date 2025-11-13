@@ -52,7 +52,7 @@ public:
     void stop();
 private:
     RingBuffer<LogMessage, 4096> buffer_;
-    std::ofstream file_;
+    int fd_;
     LogMessage current_msg_;
     std::thread worker_;
     std::atomic<bool> running_{false};
@@ -61,8 +61,8 @@ private:
 
     void worker_loop();
 
-    static std::string level_to_string(LogLevel level);
-    static std::string format_timestamp(uint64_t timestamp_ms);
+    static char* level_to_string(LogLevel level);
+    static size_t format_timestamp(char* out, uint64_t timestamp_ms);
 };
 
 #endif //LFRBLOGGING_ASYNCLOGGER_H

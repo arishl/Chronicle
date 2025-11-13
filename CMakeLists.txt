@@ -7,4 +7,6 @@ add_executable(LFRBLogging src/main.cpp
         src/RingBuffer.tpp
         include/RingBuffer.h
         include/AsyncLogger.h
-        src/AsyncLogger.cpp)
+        src/AsyncLogger.cpp
+        benchmarks/AsyncBenchmarker.cpp
+        benchmarks/AsyncBenchmarker.h)
