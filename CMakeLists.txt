@@ -5,4 +5,6 @@ set(CMAKE_CXX_STANDARD 23)
 
 add_executable(LFRBLogging src/main.cpp
         src/RingBuffer.tpp
-        include/RingBuffer.h)
+        include/RingBuffer.h
+        include/AsyncLogger.h
+        src/AsyncLogger.cpp)

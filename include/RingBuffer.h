@@ -7,14 +7,14 @@
 
 #include <iostream>
 
-template<typename T, size_t size>
+template<typename T, size_t capacity>
 class RingBuffer
 {
-    T buffer_m[ size ];
-    size_t head_m { 0 };
-    size_t tail_m { 0 };
+    T buffer_[capacity];
+    size_t head_ { 0 };
+    size_t tail_ { 0 };
 public:
-    static_assert( ( size & (size-1) ) == 0 , "Ring Buffer has to have a size of a power of 2");
+    static_assert( ( capacity & (capacity-1) ) == 0 , "Ring Buffer has to have a size of a power of 2");
     bool push( const T& item );
     bool pop( T& item );
     size_t get_size() const;

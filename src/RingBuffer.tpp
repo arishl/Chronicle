@@ -5,13 +5,13 @@
 template <typename T, size_t size>
 bool RingBuffer<T, size>::push(const T& item)
 {
-    const size_t next_head = (head_m + 1) & (size - 1);
-    if (next_head == tail_m)
+    const size_t next_head { (head_ + 1) & (size - 1) };
+    if (next_head == tail_)
     {
         return false;
     }
-    buffer_m[head_m] = item;
-    head_m = next_head;
+    buffer_[head_] = item;
+    head_ = next_head;
 
     return true;
 }
@@ -19,11 +19,11 @@ bool RingBuffer<T, size>::push(const T& item)
 template <typename T, size_t size>
 bool RingBuffer<T,size>::pop(T& item)
 {
-    if (tail_m == head_m){
+    if (tail_ == head_){
         return false;
     }
-    item = buffer_m[tail_m];
-    tail_m = (tail_m + 1) & (size - 1);
+    item = buffer_[tail_];
+    tail_ = (tail_ + 1) & (size - 1);
 
     return true;
 }
@@ -31,29 +31,29 @@ bool RingBuffer<T,size>::pop(T& item)
 template <typename T, size_t size>
 size_t RingBuffer<T, size>::get_size() const
 {
-    if (head_m >= tail_m)
+    if (head_ >= tail_)
     {
-        return head_m - tail_m;
+        return head_ - tail_;
     }
-    return size + head_m - tail_m;
+    return size + head_ - tail_;
 }
 
 template <typename T, size_t size>
 bool RingBuffer<T, size>::empty() const
 {
-    return head_m == tail_m;
+    return head_ == tail_;
 }
 
 template <typename T, size_t size>
 void RingBuffer<T, size>::clear_all()
 {
-    head_m = tail_m = 0;
+    head_ = tail_ = 0;
 }
 
 template <typename T, size_t size>
 bool RingBuffer<T, size>::is_full() const
 {
-    return ((head_m + 1) & (size-1)) == tail_m;
+    return ((head_ + 1) & (size-1)) == tail_;
 }
 
 template <typename U, size_t N>
