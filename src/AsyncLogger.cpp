@@ -51,7 +51,7 @@ void AsyncLogger::worker_loop()
     using namespace std::chrono;
 
     std::vector<std::string> local_buffer;
-    local_buffer.reserve(64);
+    local_buffer.reserve(512);
 
     auto last_flush = steady_clock::now();
 
@@ -74,8 +74,8 @@ void AsyncLogger::worker_loop()
         }
 
         auto now = steady_clock::now();
-        bool time_to_flush = duration_cast<milliseconds>(now - last_flush).count() >= 50;
-        bool batch_full = local_buffer.size() >= 64;
+        bool time_to_flush = duration_cast<milliseconds>(now - last_flush).count() >= 10000;
+        bool batch_full = local_buffer.size() >= 512;
 
         if (!local_buffer.empty() && (time_to_flush || batch_full || (!running_ && buffer_.empty())))
         {
@@ -87,8 +87,7 @@ void AsyncLogger::worker_loop()
             last_flush = now;
         }
 
-        // Wait a tiny bit if no messages were available
-        /**
+
         if (!got_msg)
         {
             std::unique_lock<std::mutex> lock(mtx_);
@@ -96,7 +95,7 @@ void AsyncLogger::worker_loop()
                 return !buffer_.empty() || !running_;
             });
         }
-        **/
+
     }
 
     // Final flush in case anything is left

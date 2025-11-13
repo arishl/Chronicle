@@ -51,7 +51,7 @@ public:
     void start();
     void stop();
 private:
-    RingBuffer<LogMessage, 32> buffer_;
+    RingBuffer<LogMessage, 4096> buffer_;
     std::ofstream file_;
     LogMessage current_msg_;
     std::thread worker_;
