@@ -10,20 +10,22 @@
 template<typename T, size_t capacity>
 class RingBuffer
 {
-    T buffer_[capacity];
-    size_t head_ { 0 };
-    size_t tail_ { 0 };
 public:
     static_assert( ( capacity & (capacity-1) ) == 0 , "Ring Buffer has to have a size of a power of 2");
     bool push( const T& item );
     bool pop( T& item );
-    size_t get_size() const;
-    bool empty() const;
+    [[nodiscard]] size_t get_size() const;
+    [[nodiscard]] bool empty() const;
     void clear_all();
-    bool is_full() const;
+    [[nodiscard]] bool is_full() const;
 
     template<typename U, size_t N>
     friend std::ostream& operator<<(std::ostream& os, const RingBuffer<U, N>& rb);
+
+private:
+    T buffer_[capacity];
+    size_t head_ { 0 };
+    size_t tail_ { 0 };
 };
 
 #include "../src/RingBuffer.tpp"

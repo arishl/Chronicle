@@ -24,7 +24,6 @@ bool RingBuffer<T,size>::pop(T& item)
     }
     item = buffer_[tail_];
     tail_ = (tail_ + 1) & (size - 1);
-
     return true;
 }
 

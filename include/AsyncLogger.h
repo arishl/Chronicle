@@ -4,9 +4,12 @@
 
 #ifndef LFRBLOGGING_ASYNCLOGGER_H
 #define LFRBLOGGING_ASYNCLOGGER_H
-#include <cstdint>
 #include <string>
-
+#include <chrono>
+#include <fstream>
+#include "RingBuffer.h"
+#include <thread>
+#include <atomic>
 enum class LogLevel
 {
     TRACE = 0,
@@ -14,20 +17,28 @@ enum class LogLevel
     INFO = 2,
     WARN = 3,
     ERROR = 4,
-
 };
 
 struct LogMessage
 {
-    LogMessage(LogLevel level, char message[], uint32_t thread_id) :
-        level_ {level}, message_ {message}, thread_id_ {thread_id}
+    LogMessage() = default;
+    LogMessage(const LogLevel level, const char* message, const uint32_t thread_id) :
+        thread_id_ {thread_id}, level_ {level}
     {
 
+        std::strncpy(message_, message, sizeof(message_) - 1);
+        message_[sizeof(message_) - 1] = '\0';
+
+        timestamp_ =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+            ).count();
     }
+
     uint64_t timestamp_;
     uint32_t thread_id_;
     LogLevel level_;
-    char message[256];
+    char message_[256];
 };
 
 class AsyncLogger
@@ -35,8 +46,23 @@ class AsyncLogger
 public:
     explicit AsyncLogger(const std::string& filename);
     ~AsyncLogger();
-    void log(LogMessage log_message);
-    bool write_to_file();
+
+    bool log(const LogMessage& log_message);
+    void start();
+    void stop();
+private:
+    RingBuffer<LogMessage, 32> buffer_;
+    std::ofstream file_;
+    LogMessage current_msg_;
+    std::thread worker_;
+    std::atomic<bool> running_{false};
+    std::mutex mtx_;
+    std::condition_variable cv_;
+
+    void worker_loop();
+
+    static std::string level_to_string(LogLevel level);
+    static std::string format_timestamp(uint64_t timestamp_ms);
 };
 
 #endif //LFRBLOGGING_ASYNCLOGGER_H
