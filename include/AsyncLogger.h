@@ -41,6 +41,11 @@ struct LogMessage
     char message_[256];
 };
 
+struct Line {
+    uint16_t len;
+    char data[512];
+};
+
 class AsyncLogger
 {
 public:
@@ -59,10 +64,10 @@ private:
     std::mutex mtx_;
     std::condition_variable cv_;
 
-    void worker_loop();
-
     static char* level_to_string(LogLevel level);
     static size_t format_timestamp(char* out, uint64_t timestamp_ms);
+    void worker_final_check(std::vector<Line>& local_buffer) const;
+    void worker_loop();
 };
 
 #endif //LFRBLOGGING_ASYNCLOGGER_H

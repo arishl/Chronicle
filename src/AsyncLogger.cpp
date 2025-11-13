@@ -99,38 +99,41 @@ size_t AsyncLogger::format_timestamp(char* out, uint64_t timestamp_ms)
     return static_cast<size_t>(n);
 }
 
+void AsyncLogger::worker_final_check(std::vector<Line>& local_buffer) const
+{
+    if (!local_buffer.empty())
+    {
+        std::string big;
+        size_t nbytes = 0;
+        for (auto& [len, data] : local_buffer)
+        {
+            nbytes += len;
+        }
+        big.reserve(nbytes);
+        for (auto& [len, data] : local_buffer)
+        {
+            big.append(data, len);
+        }
+        ::write(fd_, big.data(), big.size());
+    }
+}
+
 void AsyncLogger::worker_loop()
 {
-    // Local batch buffer: store up to 32KB of log data before writing
     static constexpr size_t MAX_BATCH_BYTES = 32 * 1024;
-
-    struct Line {
-        uint16_t len;
-        char data[512];
-    };
-
     std::vector<Line> local_buffer;
     local_buffer.reserve(512);
-
     size_t batch_bytes = 0;
-
     while (running_ || !buffer_.empty() || !local_buffer.empty())
     {
-        LogMessage msg;
-        bool got_msg = buffer_.pop(msg);
-
+        LogMessage msg {};
+        const bool got_msg = buffer_.pop(msg);
         if (got_msg)
         {
-            // --- Format timestamp in-place (no std::string!)
             char ts[32];
             size_t ts_len = format_timestamp(ts, msg.timestamp_);
-
-            // --- Level as const char*
             const char* level_str = level_to_string(msg.level_);
-
-            // --- Format a single line into fixed buffer
             Line& line = local_buffer.emplace_back();
-
             int n = std::snprintf(
                 line.data,
                 sizeof(line.data),
@@ -140,30 +143,22 @@ void AsyncLogger::worker_loop()
                 msg.thread_id_,
                 msg.message_
             );
-
             line.len = static_cast<uint16_t>(n);
             batch_bytes += n;
         }
-
         bool batch_full = batch_bytes >= MAX_BATCH_BYTES;
-
-        // Write if full OR if shutting down
         if (!local_buffer.empty() && (batch_full || (!running_ && buffer_.empty())))
         {
-            // Bulk append into a single big buffer
             std::string big;
             big.reserve(batch_bytes);
-
             for (auto& l : local_buffer)
+            {
                 big.append(l.data, l.len);
-
+            }
             ::write(fd_, big.data(), big.size());
-
             local_buffer.clear();
             batch_bytes = 0;
         }
-
-        // Block if no message
         if (!got_msg)
         {
             std::unique_lock<std::mutex> lock(mtx_);
@@ -173,19 +168,8 @@ void AsyncLogger::worker_loop()
         }
     }
 
-    // Final flush
-    if (!local_buffer.empty())
-    {
-        std::string big;
-        size_t nbytes = 0;
-        for (auto& l : local_buffer) nbytes += l.len;
+    worker_final_check(local_buffer);
 
-        big.reserve(nbytes);
-        for (auto& l : local_buffer)
-            big.append(l.data, l.len);
-
-        ::write(fd_, big.data(), big.size());
-    }
 }
 
 

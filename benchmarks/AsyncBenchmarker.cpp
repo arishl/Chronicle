@@ -12,10 +12,10 @@ bool AsyncBenchmarker::benchmark_async()
     logger.start();
     auto start_async = std::chrono::high_resolution_clock::now();
     std::thread t1([&] {
-        for (int i = 0; i < 5000; ++i)
+        for (int i = 0; i < 50; ++i)
         {
             LogMessage msg(LogLevel::INFO, "Async log message", i);
-            for (int u = 0; u < 100; u++)
+            for (int u = 0; u < 3000; u++)
             {
                 logger.log(msg);
             }
@@ -34,9 +34,9 @@ bool AsyncBenchmarker::benchmark_generic()
     auto start_sync = std::chrono::high_resolution_clock::now();
     std::thread t2([] {
         std::ofstream file("sync_log.txt");
-        for (int i = 0; i < 5000; ++i)
+        for (int i = 0; i < 50; ++i)
         {
-            for (int u = 0; u < 100; u++)
+            for (int u = 0; u < 3000; u++)
             {
                 file << "Sync log message " << i << "\n";
                 file.flush();
@@ -52,8 +52,10 @@ bool AsyncBenchmarker::benchmark_generic()
 
 bool AsyncBenchmarker::benchmark_all()
 {
+    std::cout << "\n========== Logging Benchmarks ==========\n";
     benchmark_async();
     benchmark_generic();
+    std::cout << "\n========================================\n";
 }
 
 using namespace std::chrono;
