@@ -5,17 +5,17 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include "../include/AsyncLogger/AsyncLogger.h"
 
-#include "../include/AsyncLogger.h"
 
-
-AsyncLogger::AsyncLogger(const std::string& filename)
+AsyncLogger::AsyncLogger(const std::string& filename) : buffer_()
 {
     fd_ = ::open(filename.c_str(),
                  O_WRONLY | O_CREAT | O_APPEND,
                  0644);
 
-    if (fd_ < 0) {
+    if (fd_ < 0)
+    {
         throw std::runtime_error("Failed to open log file");
     }
 
@@ -38,6 +38,15 @@ bool AsyncLogger::log(const LogMessage& msg)
     return pushed;
 }
 
+bool AsyncLogger::log(const LogLevel level, const char* message, const uint32_t thread_id)
+{
+    const LogMessage msg(level, message, thread_id);
+    const bool pushed = log(msg);
+    if (pushed)
+        cv_.notify_one();
+    return pushed;
+}
+
 void AsyncLogger::start()
 {
     running_ = true;
@@ -52,7 +61,7 @@ void AsyncLogger::stop()
         worker_.join();
 }
 
-char* AsyncLogger::level_to_string(const LogLevel level)
+const char* AsyncLogger::level_to_string(const LogLevel level)
 {
     switch (level)
     {
@@ -69,20 +78,16 @@ size_t AsyncLogger::format_timestamp(char* out, uint64_t timestamp_ms)
 {
     using namespace std::chrono;
 
-    // Convert timestamp_ms → time_t seconds
     const auto tp = time_point<system_clock, milliseconds>(milliseconds(timestamp_ms));
     std::time_t t = system_clock::to_time_t(tp);
 
-    // Convert to calendar time
-    std::tm tm;
+    std::tm tm {};
 #if defined(_WIN32)
     localtime_s(&tm, &t);
 #else
     localtime_r(&t, &tm);  // thread-safe
 #endif
 
-    // Format YYYY-MM-DD HH:MM:SS into buffer
-    // Example: "2025-11-13 14:03:51"
     int n = std::snprintf(
         out,
         32,
@@ -104,12 +109,12 @@ void AsyncLogger::worker_final_check(std::vector<Line>& local_buffer) const
     if (!local_buffer.empty())
     {
         std::string big;
-        size_t nbytes = 0;
+        size_t capacity = 0;
         for (auto& [len, data] : local_buffer)
         {
-            nbytes += len;
+            capacity += len;
         }
-        big.reserve(nbytes);
+        big.reserve(capacity);
         for (auto& [len, data] : local_buffer)
         {
             big.append(data, len);
@@ -131,14 +136,14 @@ void AsyncLogger::worker_loop()
         if (got_msg)
         {
             char ts[32];
-            size_t ts_len = format_timestamp(ts, msg.timestamp_);
+            const size_t ts_len = format_timestamp(ts, msg.timestamp_);
             const char* level_str = level_to_string(msg.level_);
             Line& line = local_buffer.emplace_back();
-            int n = std::snprintf(
+            const int n = std::snprintf(
                 line.data,
                 sizeof(line.data),
                 "%.*s %s [T%u] %s\n",
-                (int)ts_len, ts,
+                static_cast<int>(ts_len), ts,
                 level_str,
                 msg.thread_id_,
                 msg.message_
@@ -146,8 +151,7 @@ void AsyncLogger::worker_loop()
             line.len = static_cast<uint16_t>(n);
             batch_bytes += n;
         }
-        bool batch_full = batch_bytes >= MAX_BATCH_BYTES;
-        if (!local_buffer.empty() && (batch_full || (!running_ && buffer_.empty())))
+        if (const bool batch_full = batch_bytes >= MAX_BATCH_BYTES; !local_buffer.empty() && (batch_full || (!running_ && buffer_.empty())))
         {
             std::string big;
             big.reserve(batch_bytes);

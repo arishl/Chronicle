@@ -4,7 +4,8 @@
 
 #include "AsyncBenchmarker.h"
 #include <thread>
-#include "../include/AsyncLogger.h"
+#include <iostream>
+#include "../include/AsyncLogger/AsyncLogger.h"
 
 bool AsyncBenchmarker::benchmark_async()
 {
@@ -27,6 +28,8 @@ bool AsyncBenchmarker::benchmark_async()
     auto end_async = std::chrono::high_resolution_clock::now();
     auto async_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_async - start_async).count();
     std::cout << "Async logging took: " << async_ms << " ms\n";
+
+    return true;
 }
 
 bool AsyncBenchmarker::benchmark_generic()
@@ -48,6 +51,8 @@ bool AsyncBenchmarker::benchmark_generic()
     auto end_sync = std::chrono::high_resolution_clock::now();
     auto sync_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_sync - start_sync).count();
     std::cout << "Sync logging took: " << sync_ms << " ms\n";
+
+    return true;
 }
 
 bool AsyncBenchmarker::benchmark_all()
@@ -56,6 +61,8 @@ bool AsyncBenchmarker::benchmark_all()
     benchmark_async();
     benchmark_generic();
     std::cout << "\n========================================\n";
+
+    return true;
 }
 
 using namespace std::chrono;

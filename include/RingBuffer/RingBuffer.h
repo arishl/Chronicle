@@ -5,8 +5,6 @@
 #ifndef LFRBLOGGING_RINGBUFFER_H
 #define LFRBLOGGING_RINGBUFFER_H
 
-#include <iostream>
-
 template<typename T, size_t capacity>
 class RingBuffer
 {
@@ -28,6 +26,6 @@ private:
     size_t tail_ { 0 };
 };
 
-#include "../src/RingBuffer.tpp"
+#include "../../src/RingBuffer.tpp"
 
 #endif //LFRBLOGGING_RINGBUFFER_H
