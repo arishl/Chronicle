@@ -14,16 +14,20 @@ bool AsyncBenchmarker::benchmark_async()
 
     logger.start();
     const LogLevel AUDIT {32, "[AUDIT]"};
+    const LogLevel SQLITE {35, "[SQLITE]"};
     const auto start_async = std::chrono::high_resolution_clock::now();
     std::thread t1([&] {
         for (int i = 0; i < 50; ++i)
         {
             LogMessage msg(AUDIT, "Async log message", i);
             LogMessage msg1(LogLevel::TRACE, "Async log message", i);
+            LogMessage msg2(SQLITE, "Async log message", i);
             for (int u = 0; u < 3000; u++)
             {
                 logger.log(msg1);
                 logger.log(msg);
+                logger.log(msg2);
+                logger.log(LogLevel::DEBUG, "FUCKED", i);
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }

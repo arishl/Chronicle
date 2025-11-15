@@ -7,32 +7,46 @@
 
 #include "../include/AsyncLogger/LogLevel.h"
 
-static std::unordered_map<LogLevel::LevelID, std::string> registry = {
-    {0, "[TRACE]"},
-    {1, "[DEBUG]"},
-    {2, "[INFO]"},
-    {3, "[WARN]"},
-    {4, "[ERROR]"},
+struct LevelInfo {
+    std::string name;
+    std::string color;
 };
 
-void LogLevel::register_level(LevelType v, std::string name) {
-    registry[v] = std::move(name);
+static std::unordered_map<LogLevel::LevelID, LevelInfo> registry = {
+    {0, {"[TRACE]", "\033[37m"}},  // white
+    {1, {"[DEBUG]", "\033[36m"}},  // cyan
+    {2, {"[INFO]",  "\033[32m"}},  // green
+    {3, {"[WARN]",  "\033[33m"}},  // yellow
+    {4, {"[ERROR]", "\033[31m"}},  // red
+};
+
+void LogLevel::register_level(LevelType v, const std::string& name, const std::string& color)
+{
+    registry[v] = {std::move(name), color};
 }
 
 const char* LogLevel::to_string(const LogLevel v)
 {
     static const char* unknown = "[UNKNOWN]";
 
-    if (const auto it = registry.find(v.value); it != registry.end()) {
-        return it->second.c_str();
-    }
+    const auto it = registry.find(v.value);
+    if (it != registry.end())
+        return it->second.name.c_str();
 
     return unknown;
 }
 
+const char* LogLevel::color_of(const LogLevel v)
+{
+    static const char* no_color = "";
+    const auto it = registry.find(v.value);
+    if (it != registry.end())
+        return it->second.color.c_str();
+    return no_color;
+}
+
 LogLevel LogLevel::TRACE {0, "[TRACE]"};
 LogLevel LogLevel::DEBUG {1, "[DEBUG]"};
-LogLevel LogLevel::INFO {2, "[INFO]"};
-LogLevel LogLevel::WARN {3, "[WARN]"};
+LogLevel LogLevel::INFO  {2, "[INFO]"};
+LogLevel LogLevel::WARN  {3, "[WARN]"};
 LogLevel LogLevel::ERROR {4, "[ERROR]"};
-

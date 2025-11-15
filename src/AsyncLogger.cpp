@@ -72,7 +72,7 @@ size_t AsyncLogger::format_timestamp(char* out, uint64_t timestamp_ms)
 #if defined(_WIN32)
     localtime_s(&tm, &t);
 #else
-    localtime_r(&t, &tm);  // thread-safe
+    localtime_r(&t, &tm);
 #endif
 
     int n = std::snprintf(
@@ -125,7 +125,21 @@ void AsyncLogger::worker_loop()
             char ts[32];
             const size_t ts_len = format_timestamp(ts, msg.timestamp_);
             const char* level_str = LogLevel::to_string(msg.level_);
+            const char* level_color = LogLevel::color_of(msg.level_);
             Line& line = local_buffer.emplace_back();
+            /**
+            const int n = std::snprintf(
+                line.data,
+                sizeof(line.data),
+                "%.*s %s%s\033[0m [T%u] %s\n",
+                static_cast<int>(ts_len),
+                ts,
+                level_color,
+                level_str,
+                msg.thread_id_,
+                msg.message_
+            );
+            **/
             const int n = std::snprintf(
                 line.data,
                 sizeof(line.data),
