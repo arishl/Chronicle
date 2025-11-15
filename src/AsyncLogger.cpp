@@ -30,9 +30,9 @@ AsyncLogger::~AsyncLogger()
     }
 }
 
-bool AsyncLogger::log(const LogMessage& msg)
+bool AsyncLogger::log(const LogMessage& log_message)
 {
-    bool pushed = buffer_.push(msg);
+    const bool pushed = buffer_.push(log_message);
     if (pushed)
         cv_.notify_one();
     return pushed;
@@ -59,19 +59,6 @@ void AsyncLogger::stop()
     cv_.notify_one();
     if (worker_.joinable())
         worker_.join();
-}
-
-const char* AsyncLogger::level_to_string(const LogLevel level)
-{
-    switch (level)
-    {
-    case LogLevel::TRACE: return "[TRACE]";
-    case LogLevel::DEBUG: return "[DEBUG]";
-    case LogLevel::INFO:  return "[INFO]";
-    case LogLevel::WARN:  return "[WARN]";
-    case LogLevel::ERROR: return "[ERROR]";
-    }
-    return "[UNKNOWN]";
 }
 
 size_t AsyncLogger::format_timestamp(char* out, uint64_t timestamp_ms)
@@ -137,7 +124,7 @@ void AsyncLogger::worker_loop()
         {
             char ts[32];
             const size_t ts_len = format_timestamp(ts, msg.timestamp_);
-            const char* level_str = level_to_string(msg.level_);
+            const char* level_str = LogLevel::to_string(msg.level_);
             Line& line = local_buffer.emplace_back();
             const int n = std::snprintf(
                 line.data,

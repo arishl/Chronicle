@@ -6,18 +6,23 @@
 #include <thread>
 #include <iostream>
 #include "../include/AsyncLogger/AsyncLogger.h"
+#include "../include/AsyncLogger/LogLevel.h"
 
 bool AsyncBenchmarker::benchmark_async()
 {
     AsyncLogger logger("async_log.txt");
+
     logger.start();
-    auto start_async = std::chrono::high_resolution_clock::now();
+    const LogLevel AUDIT {32, "[AUDIT]"};
+    const auto start_async = std::chrono::high_resolution_clock::now();
     std::thread t1([&] {
         for (int i = 0; i < 50; ++i)
         {
-            LogMessage msg(LogLevel::INFO, "Async log message", i);
+            LogMessage msg(AUDIT, "Async log message", i);
+            LogMessage msg1(LogLevel::TRACE, "Async log message", i);
             for (int u = 0; u < 3000; u++)
             {
+                logger.log(msg1);
                 logger.log(msg);
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));

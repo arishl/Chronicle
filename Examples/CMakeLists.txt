@@ -9,4 +9,5 @@ add_executable(LFRBLogging demo.cpp
         ../include/AsyncLogger/AsyncLogger.h
         ../src/AsyncLogger.cpp
         ../benchmarks/AsyncBenchmarker.cpp
-        ../benchmarks/AsyncBenchmarker.h)
+        ../benchmarks/AsyncBenchmarker.h
+        ../src/LogLevel.cpp)
