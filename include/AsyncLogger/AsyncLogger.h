@@ -24,7 +24,7 @@ public:
     void start();
     void stop();
 private:
-    RingBuffer<LogMessage, 4096> buffer_;
+    RingBuffer<LogMessage, 4096, ThreadsPolicy::MPMC, WaitPolicy::BothWait> buffer_;
     int fd_;
     LogMessage current_msg_{};
     std::thread worker_;

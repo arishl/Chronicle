@@ -8,22 +8,11 @@
 #include "LogLevel.h"
 #include <chrono>
 
-struct LogMessage
+class LogMessage
 {
+public:
     LogMessage() = default;
-    LogMessage(const LogLevel level, const char* message, const uint32_t thread_id) :
-        thread_id_ {thread_id}, level_ {level}
-    {
-
-        std::strncpy(message_, message, sizeof(message_) - 1);
-        message_[sizeof(message_) - 1] = '\0';
-
-        timestamp_ =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()
-            ).count();
-    }
-
+    LogMessage(const LogLevel level, const char* message, const uint32_t thread_id);
     uint64_t timestamp_;
     uint32_t thread_id_;
     LogLevel level_;

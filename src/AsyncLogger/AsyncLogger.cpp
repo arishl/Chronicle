@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "../include/AsyncLogger/AsyncLogger.h"
+#include "../../include/AsyncLogger/AsyncLogger.h"
 
 
 AsyncLogger::AsyncLogger(const std::string& filename) : buffer_()

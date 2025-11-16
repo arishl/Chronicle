@@ -5,7 +5,24 @@
 #ifndef LFRBLOGGING_RINGBUFFER_H
 #define LFRBLOGGING_RINGBUFFER_H
 
-template<typename T, size_t capacity>
+enum class ThreadsPolicy
+{
+    SPSC = 0,
+    MPSC,
+    SPMC,
+    MPMC
+};
+
+enum class WaitPolicy
+{
+    NoWaits = 0,
+    PushWait,
+    PopWait,
+    BothWait
+};
+
+template<typename T, size_t capacity, ThreadsPolicy Threading,
+    WaitPolicy Waiting = WaitPolicy::NoWaits>
 class RingBuffer
 {
 public:
@@ -17,8 +34,9 @@ public:
     void clear_all();
     [[nodiscard]] bool is_full() const;
 
-    template<typename U, size_t N>
-    friend std::ostream& operator<<(std::ostream& os, const RingBuffer<U, N>& rb);
+    template<typename U, size_t N, ThreadsPolicy X,
+        WaitPolicy V>
+    friend std::ostream& operator<<(std::ostream& os, const RingBuffer<U, N, X, V>& rb);
 
 private:
     T buffer_[capacity];
@@ -26,6 +44,6 @@ private:
     size_t tail_ { 0 };
 };
 
-#include "../../src/RingBuffer.tpp"
+#include "../../src/RingBuffer/RingBuffer.tpp"
 
 #endif //LFRBLOGGING_RINGBUFFER_H
