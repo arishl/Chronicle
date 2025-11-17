@@ -5,6 +5,14 @@
 #ifndef LFRBLOGGING_RINGBUFFER_H
 #define LFRBLOGGING_RINGBUFFER_H
 
+#include <atomic>
+#include <chrono>
+#include <cstddef>
+#include <thread>
+#include <new>
+
+
+
 enum class ThreadsPolicy
 {
     SPSC = 0,
@@ -21,29 +29,40 @@ enum class WaitPolicy
     BothWait
 };
 
-template<typename T, size_t capacity, ThreadsPolicy Threading,
-    WaitPolicy Waiting = WaitPolicy::NoWaits>
+template <typename T, size_t size, WaitPolicy WaitPolicy>
 class RingBuffer
 {
-public:
-    static_assert( ( capacity & (capacity-1) ) == 0 , "Ring Buffer has to have a size of a power of 2");
-    bool push( const T& item );
-    bool pop( T& item );
-    [[nodiscard]] size_t get_size() const;
-    [[nodiscard]] bool empty() const;
-    void clear_all();
-    [[nodiscard]] bool is_full() const;
 
-    template<typename U, size_t N, ThreadsPolicy X,
-        WaitPolicy V>
-    friend std::ostream& operator<<(std::ostream& os, const RingBuffer<U, N, X, V>& rb);
+public:
+    template <class AllocationType>
+    void Allocate(AllocationType& allocation);
+    bool IsAllocated() const;
+
 
 private:
-    T buffer_[capacity];
-    size_t head_ { 0 };
-    size_t tail_ { 0 };
+    static constexpr size_t sAlign = 64;
+
+    alignas(sAlign) std::atomic<int> push_index_;
+    alignas(sAlign) std::atomic<int> pop_index_;
+    alignas(sAlign) std::atomic<int> size_;
+    alignas(sAlign) std::byte*  storage_ = nullptr;
+
+    int capacity_ = 0;
+    int index_end_;
 };
 
-#include "../../src/RingBuffer/RingBuffer.tpp"
+template <typename T, size_t size, WaitPolicy WaitPolicy>
+template <class AllocationType>
+void RingBuffer<T, size, WaitPolicy>::Allocate(AllocationType& allocation)
+{
+
+
+}
+
+template <typename T, size_t size, WaitPolicy WaitPolicy>
+bool RingBuffer<T, size, WaitPolicy>::IsAllocated() const
+{
+
+}
 
 #endif //LFRBLOGGING_RINGBUFFER_H
