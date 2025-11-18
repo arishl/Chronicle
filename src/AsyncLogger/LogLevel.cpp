@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <string>
 
-#include "../../include/AsyncLogger/LogLevel.h"
+#include "../../include/AsyncLogger/LogLevel.hpp"
 
 struct LevelInfo {
     std::string name;
@@ -20,17 +20,16 @@ static std::unordered_map<LogLevel::LevelID, LevelInfo> registry = {
     {4, {"[ERROR]", "\033[31m"}},  // red
 };
 
-void LogLevel::register_level(LevelType v, const std::string& name)
+void LogLevel::register_level(const LevelType value, const std::string& name)
 {
-    registry[v] = {std::move(name)};
+    registry[value] = {std::move(name)};
 }
 
-const char* LogLevel::to_string(const LogLevel v)
+const char* LogLevel::to_string(const LogLevel value)
 {
     static const char* unknown = "[UNKNOWN]";
 
-    const auto it = registry.find(v.value);
-    if (it != registry.end())
+    if (const auto it = registry.find(value.mValue); it != registry.end())
         return it->second.name.c_str();
 
     return unknown;
@@ -39,8 +38,7 @@ const char* LogLevel::to_string(const LogLevel v)
 const char* LogLevel::color_of(const LogLevel v)
 {
     static const char* no_color = "";
-    const auto it = registry.find(v.value);
-    if (it != registry.end())
+    if (const auto it = registry.find(v.mValue); it != registry.end())
         return it->second.color.c_str();
     return no_color;
 }

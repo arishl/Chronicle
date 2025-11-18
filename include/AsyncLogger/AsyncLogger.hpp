@@ -6,12 +6,12 @@
 #define LFRBLOGGING_ASYNCLOGGER_H
 #include <string>
 #include <fstream>
-#include "../RingBuffer/RingBuffer.h"
+#include "../RingBuffer/RingBuffer.hpp"
 #include <thread>
 #include <atomic>
 #include <chrono>
-#include "LogLevel.h"
-#include "LogMessage.h"
+#include "LogLevel.hpp"
+#include "LogMessage.hpp"
 
 class AsyncLogger
 {
@@ -19,26 +19,26 @@ public:
     explicit AsyncLogger(const std::string& filename);
     ~AsyncLogger();
 
-    bool log(const LogMessage& log_message);
-    bool log(LogLevel level, const char* message, uint32_t thread_id);
+    bool log(const LogMessage& logMessage);
+    bool log(LogLevel level, const char* message, uint32_t threadID);
     void start();
     void stop();
 private:
     RingBuffer<LogMessage, 4096, ThreadsPolicy::MPMC, WaitPolicy::BothWait> buffer_;
-    int fd_;
-    LogMessage current_msg_{};
-    std::thread worker_;
-    std::atomic<bool> running_{false};
-    std::mutex mtx_;
-    std::condition_variable cv_;
+    int mFD;
+    LogMessage mCurrentMessage{};
+    std::thread mWorker;
+    std::atomic<bool> mRunning{false};
+    std::mutex mMTX;
+    std::condition_variable mCV;
 
     struct Line {
         uint16_t len;
         char data[512];
     };
 
-    static size_t format_timestamp(char* out, uint64_t timestamp_ms);
-    void worker_final_check(std::vector<Line>& local_buffer) const;
+    static size_t format_timestamp(char* out, uint64_t timestampMS);
+    void worker_final_check(std::vector<Line>& localBuffer) const;
     void worker_loop();
 };
 

@@ -5,67 +5,67 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "../../include/AsyncLogger/AsyncLogger.h"
+#include "../../include/AsyncLogger/AsyncLogger.hpp"
 
 
 AsyncLogger::AsyncLogger(const std::string& filename) : buffer_()
 {
-    fd_ = ::open(filename.c_str(),
+    mFD = ::open(filename.c_str(),
                  O_WRONLY | O_CREAT | O_APPEND,
                  0644);
 
-    if (fd_ < 0)
+    if (mFD < 0)
     {
         throw std::runtime_error("Failed to open log file");
     }
 
-    running_ = true;
+    mRunning = true;
 }
 
 AsyncLogger::~AsyncLogger()
 {
     stop();
-    if (fd_ >= 0) {
-        ::close(fd_);
+    if (mFD >= 0) {
+        ::close(mFD);
     }
 }
 
-bool AsyncLogger::log(const LogMessage& log_message)
+bool AsyncLogger::log(const LogMessage& logMessage)
 {
-    const bool pushed = buffer_.push(log_message);
+    const bool pushed = buffer_.push(logMessage);
     if (pushed)
-        cv_.notify_one();
+        mCV.notify_one();
     return pushed;
 }
 
-bool AsyncLogger::log(const LogLevel level, const char* message, const uint32_t thread_id)
+bool AsyncLogger::log(const LogLevel level, const char* message, const uint32_t threadID)
 {
-    const LogMessage msg(level, message, thread_id);
+    const LogMessage msg(level, message, threadID);
     const bool pushed = log(msg);
     if (pushed)
-        cv_.notify_one();
+        mCV.notify_one();
     return pushed;
 }
 
 void AsyncLogger::start()
 {
-    running_ = true;
-    worker_ = std::thread(&AsyncLogger::worker_loop, this);
+    mRunning = true;
+    mWorker = std::thread(&AsyncLogger::worker_loop, this);
 }
 
 void AsyncLogger::stop()
 {
-    running_ = false;
-    cv_.notify_one();
-    if (worker_.joinable())
-        worker_.join();
+    mRunning = false;
+    mCV.notify_one();
+    if (mWorker.joinable())
+        mWorker.join();
 }
 
-size_t AsyncLogger::format_timestamp(char* out, uint64_t timestamp_ms)
+size_t AsyncLogger::format_timestamp(char* out, uint64_t timestampMS)
 {
     using namespace std::chrono;
 
-    const auto tp = time_point<system_clock, milliseconds>(milliseconds(timestamp_ms));
+    const auto tp = time_point<system_clock, milliseconds>(milliseconds(timestampMS));
     std::time_t t = system_clock::to_time_t(tp);
 
     std::tm tm {};
@@ -85,28 +85,28 @@ size_t AsyncLogger::format_timestamp(char* out, uint64_t timestamp_ms)
         tm.tm_hour,
         tm.tm_min,
         tm.tm_sec,
-        static_cast<unsigned long long>(timestamp_ms % 1000)
+        static_cast<unsigned long long>(timestampMS % 1000)
     );
 
     return static_cast<size_t>(n);
 }
 
-void AsyncLogger::worker_final_check(std::vector<Line>& local_buffer) const
+void AsyncLogger::worker_final_check(std::vector<Line>& localBuffer) const
 {
-    if (!local_buffer.empty())
+    if (!localBuffer.empty())
     {
         std::string big;
         size_t capacity = 0;
-        for (auto& [len, data] : local_buffer)
+        for (auto& [len, data] : localBuffer)
         {
             capacity += len;
         }
         big.reserve(capacity);
-        for (auto& [len, data] : local_buffer)
+        for (auto& [len, data] : localBuffer)
         {
             big.append(data, len);
         }
-        ::write(fd_, big.data(), big.size());
+        ::write(mFD, big.data(), big.size());
     }
 }
 
@@ -116,16 +116,16 @@ void AsyncLogger::worker_loop()
     std::vector<Line> local_buffer;
     local_buffer.reserve(512);
     size_t batch_bytes = 0;
-    while (running_ || !buffer_.empty() || !local_buffer.empty())
+    while (mRunning || !buffer_.empty() || !local_buffer.empty())
     {
         LogMessage msg {};
         const bool got_msg = buffer_.pop(msg);
         if (got_msg)
         {
             char ts[32];
-            const size_t ts_len = format_timestamp(ts, msg.timestamp_);
-            const char* level_str = LogLevel::to_string(msg.level_);
-            const char* level_color = LogLevel::color_of(msg.level_);
+            const size_t ts_len = format_timestamp(ts, msg.mTimestamp);
+            const char* level_str = LogLevel::to_string(msg.mLevel);
+            const char* level_color = LogLevel::color_of(msg.mLevel);
             Line& line = local_buffer.emplace_back();
             /**
             const int n = std::snprintf(
@@ -147,12 +147,12 @@ void AsyncLogger::worker_loop()
                 static_cast<int>(ts_len), ts,
                 level_str,
                 msg.thread_id_,
-                msg.message_
+                msg.mMessage
             );
             line.len = static_cast<uint16_t>(n);
             batch_bytes += n;
         }
-        if (const bool batch_full = batch_bytes >= MAX_BATCH_BYTES; !local_buffer.empty() && (batch_full || (!running_ && buffer_.empty())))
+        if (const bool batch_full = batch_bytes >= MAX_BATCH_BYTES; !local_buffer.empty() && (batch_full || (!mRunning && buffer_.empty())))
         {
             std::string big;
             big.reserve(batch_bytes);
@@ -160,15 +160,15 @@ void AsyncLogger::worker_loop()
             {
                 big.append(l.data, l.len);
             }
-            ::write(fd_, big.data(), big.size());
+            ::write(mFD, big.data(), big.size());
             local_buffer.clear();
             batch_bytes = 0;
         }
         if (!got_msg)
         {
-            std::unique_lock<std::mutex> lock(mtx_);
-            cv_.wait(lock, [&] {
-                return !buffer_.empty() || !running_;
+            std::unique_lock<std::mutex> lock(mMTX);
+            mCV.wait(lock, [&] {
+                return !buffer_.empty() || !mRunning;
             });
         }
     }

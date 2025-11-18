@@ -1,4 +1,4 @@
-#include "../benchmarks/AsyncBenchmarker.h"
+#include "../benchmarks/AsyncBenchmarker.hpp"
 
 int main()
 {

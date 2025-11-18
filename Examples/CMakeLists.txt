@@ -5,11 +5,13 @@ set(CMAKE_CXX_STANDARD 23)
 
 add_executable(LFRBLogging demo.cpp
         ../src/RingBuffer/RingBuffer.tpp
-        ../include/RingBuffer/RingBuffer.h
-        ../include/AsyncLogger/AsyncLogger.h
+        ../include/RingBuffer/RingBuffer.hpp
+        ../include/AsyncLogger/AsyncLogger.hpp
         ../src/AsyncLogger/AsyncLogger.cpp
         ../benchmarks/AsyncBenchmarker.cpp
-        ../benchmarks/AsyncBenchmarker.h
+        ../benchmarks/AsyncBenchmarker.hpp
         ../src/AsyncLogger/LogLevel.cpp
-        ../include/AsyncLogger/LogLevel.h
-        ../src/AsyncLogger/LogMessage.cpp)
+        ../include/AsyncLogger/LogLevel.hpp
+        ../src/AsyncLogger/LogMessage.cpp
+        ../include/Allocator/Allocator.hpp
+        ../src/Allocator/Allocator.cpp)

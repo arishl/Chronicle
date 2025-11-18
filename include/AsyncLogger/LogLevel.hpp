@@ -12,14 +12,14 @@ public:
     using LevelID = uint32_t;
     using LevelType = uint32_t;
     LogLevel() = default;
-    explicit LogLevel(const LevelType v, const std::string& name)
-        : value(v)
+    explicit LogLevel(const LevelType value, const std::string& name)
+        : mValue(value)
     {
-        register_level(v, name);
+        register_level(value, name);
     }
-    static void register_level(LevelType v, const std::string& name);
-    static const char* to_string(LogLevel v);
-    static const char* color_of(LogLevel v);
+    static void register_level(LevelType value, const std::string& name);
+    static const char* to_string(LogLevel value);
+    static const char* color_of(LogLevel value);
 
     static LogLevel TRACE;
     static LogLevel DEBUG;
@@ -27,7 +27,7 @@ public:
     static LogLevel WARN;
     static LogLevel ERROR;
 private:
-    LevelType value;
+    LevelType mValue;
 };
 
 

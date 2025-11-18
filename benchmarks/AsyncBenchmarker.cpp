@@ -2,11 +2,11 @@
 // Created by Aris Lemmenes on 11/13/25.
 //
 
-#include "AsyncBenchmarker.h"
+#include "AsyncBenchmarker.hpp"
 #include <thread>
 #include <iostream>
-#include "../include/AsyncLogger/AsyncLogger.h"
-#include "../include/AsyncLogger/LogLevel.h"
+#include "../include/AsyncLogger/AsyncLogger.hpp"
+#include "../include/AsyncLogger/LogLevel.hpp"
 
 bool AsyncBenchmarker::benchmark_async()
 {
