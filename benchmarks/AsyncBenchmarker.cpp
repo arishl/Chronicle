@@ -11,7 +11,6 @@
 bool AsyncBenchmarker::benchmark_async()
 {
     AsyncLogger logger("async_log.txt");
-
     logger.start();
     const LogLevel AUDIT {32, "[AUDIT]"};
     const LogLevel SQLITE {35, "[SQLITE]"};
