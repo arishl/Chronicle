@@ -3,8 +3,9 @@
 //
 #include "../../include/Allocator/Allocator.hpp"
 
-#include <cstdlib>
+
 #include <memory>
+#include <cstdlib>
 
 Allocator::Allocator(int const aBufferSize) : mTotalSize { static_cast<unsigned long>(aBufferSize) }
 {

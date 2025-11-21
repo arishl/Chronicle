@@ -42,18 +42,16 @@ public:
     bool emplace(Args&& ...aArgs);
     bool pop(Datatype& aPoppedData);
     bool empty() const noexcept;
+
 private:
     static constexpr size_t sAlign = 64;
-
     alignas(sAlign) std::atomic<int> mPushIndex;
     alignas(sAlign) std::atomic<int> mPopIndex;
     alignas(sAlign) std::atomic<int> mSize;
     alignas(sAlign) std::byte* mStorage = nullptr;
-
-    int mIndexEnd;
+    int mIndexEnd {0};
 
     int bump_index(int aIndex) const;
-
     void increase_size(int aNumPushed);
     void decrease_size(int aNumPopped);
 };
@@ -80,15 +78,15 @@ void RingBuffer<DataType, WaitPolicy, Capacity>::allocate(AllocatorType& aAlloca
     }
 
     static constexpr int sMaxValue = std::numeric_limits<int>::max();
-    static constexpr int cMaxWrap  = sMaxValue / Capacity;
-    static_assert(cMaxWrap > 2, "Capacity too large: integer wrap protection insufficient");
-    mIndexEnd = Capacity * cMaxWrap;
+    static constexpr int sMaxWrap  = sMaxValue / Capacity;
+    static_assert(sMaxWrap > 2, "Capacity too large: integer wrap protection insufficient");
+    mIndexEnd = Capacity * sMaxWrap;
 }
 
 template <typename T, WaitPolicy WaitPolicy, size_t Capacity>
 bool RingBuffer<T, WaitPolicy, Capacity>::is_allocated() const
 {
-    return (mStorage != nullptr);
+    return mStorage != nullptr;
 }
 
 template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
@@ -108,15 +106,14 @@ bool RingBuffer<Datatype, WaitPolicy, Capacity>::emplace(ArgTypes&&... aArgs)
 {
     const int cUnwrappedPushIndex {mPushIndex.load(std::memory_order::relaxed)};
     const int cUnwrappedPopIndex {mPopIndex.load(std::memory_order::acquire)};
-    const int cIndexDelta = cUnwrappedPushIndex - cUnwrappedPopIndex;
-    if ((cIndexDelta == Capacity) || (cIndexDelta == (Capacity - mIndexEnd)))
+    if (const int cIndexDelta = cUnwrappedPushIndex - cUnwrappedPopIndex; cIndexDelta == Capacity || cIndexDelta == Capacity - mIndexEnd)
     {
         return false;
     }
     const unsigned long cPushIndex = cUnwrappedPushIndex % Capacity;
     std::byte* cAddress = mStorage + cPushIndex * sizeof(Datatype);
     new (cAddress) Datatype(std::forward<ArgTypes>(aArgs)...);
-    auto cNewPushIndex = bump_index(cUnwrappedPushIndex);
+    const auto cNewPushIndex = bump_index(cUnwrappedPushIndex);
     mPushIndex.store(cNewPushIndex, std::memory_order::release);
     increase_size(1);
     return true;
@@ -149,10 +146,10 @@ bool RingBuffer<Datatype, WaitPolicy, Capacity>::empty() const noexcept
 }
 
 template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
-int RingBuffer<Datatype, WaitPolicy, Capacity>::bump_index(int aIndex) const
+int RingBuffer<Datatype, WaitPolicy, Capacity>::bump_index(const int aIndex) const
 {
     const int cIncrIndex = aIndex + 1;
-    return (cIncrIndex < mIndexEnd) ? cIncrIndex : 0;
+    return cIncrIndex < mIndexEnd ? cIncrIndex : 0;
 }
 
 template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>

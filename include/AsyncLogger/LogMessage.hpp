@@ -10,10 +10,12 @@
 
 struct LogMessage
 {
+    using TimeStamp = uint64_t;
+    using ThreadID = uint32_t;
     LogMessage() = default;
-    LogMessage(const LogLevel level, const char* message, const uint32_t threadID);
-    uint64_t mTimestamp;
-    uint32_t mThreadID;
+    LogMessage(LogLevel aLevel, const char* aMessage, ThreadID aThreadID);
+    TimeStamp mTimestamp;
+    ThreadID mThreadID;
     LogLevel mLevel;
     char mMessage[256];
 };

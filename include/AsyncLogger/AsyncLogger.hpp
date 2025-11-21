@@ -17,25 +17,32 @@
 class AsyncLogger
 {
 public:
-    explicit AsyncLogger(const std::string& aFilename);
+    using ThreadID = uint32_t;
+    using FileName = std::string;
+    explicit AsyncLogger(const FileName& aFilename);
     ~AsyncLogger();
-
     bool log(const LogMessage& aLogMessage);
-    bool log(LogLevel aLevel, const char* aMessage, uint32_t aThreadID);
+    bool log(LogLevel aLevel, const char* aMessage, ThreadID aThreadID);
     void start();
     void stop();
+
 private:
-    Allocator mAllocator = Allocator(4096);
-    RingBuffer<LogMessage, WaitPolicy::NoWaits, 4096> mBuffer{};
+    using Thread = std::thread;
+    using Mutex = std::mutex;
+    using AtomicBool = std::atomic<bool>;
+    using ConditionVariable = std::condition_variable;
+    Allocator mAllocator = Allocator(1024*1024);
+    RingBuffer<LogMessage, WaitPolicy::NoWaits, 1000> mBuffer{};
     int mFD;
     LogMessage mCurrentMessage{};
-    std::thread mWorker;
-    std::atomic<bool> mRunning{false};
-    std::mutex mMTX;
-    std::condition_variable mCV;
+    Thread mWorker;
+    AtomicBool mRunning{false};
+    Mutex mMTX;
+    ConditionVariable mCV;
 
     struct Line {
-        uint16_t mLen;
+        using Length = uint32_t;
+        Length mLen;
         char mData[512];
     };
 

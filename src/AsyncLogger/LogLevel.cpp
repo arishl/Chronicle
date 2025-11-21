@@ -8,8 +8,8 @@
 #include "../../include/AsyncLogger/LogLevel.hpp"
 
 struct LevelInfo {
-    std::string name;
-    std::string color;
+    std::string mName;
+    std::string mColor;
 };
 
 static std::unordered_map<LogLevel::LevelID, LevelInfo> sRegistry = {
@@ -20,26 +20,30 @@ static std::unordered_map<LogLevel::LevelID, LevelInfo> sRegistry = {
     {4, {"[ERROR]", "\033[31m"}},  // red
 };
 
-void LogLevel::register_level(const LevelType aValue, const std::string& aName)
+LogLevel::LogLevel(const LevelType aValue, const LevelName& aName)
+: mValue(aValue)
 {
-    sRegistry[aValue] = {std::move(aName)};
+    register_level(aValue, aName);
+}
+
+void LogLevel::register_level(const LevelType aValue, const LevelName& aName)
+{
+    sRegistry[aValue] = {aName};
 }
 
 const char* LogLevel::to_string(const LogLevel aValue)
 {
-    static const char* unknown = "[UNKNOWN]";
-
+    static auto sUnknown = "[UNKNOWN]";
     if (const auto it = sRegistry.find(aValue.mValue); it != sRegistry.end())
-        return it->second.name.c_str();
-
-    return unknown;
+        return it->second.mName.c_str();
+    return sUnknown;
 }
 
 const char* LogLevel::color_of(const LogLevel aValue)
 {
     static auto sNoColor = "";
     if (const auto it = sRegistry.find(aValue.mValue); it != sRegistry.end())
-        return it->second.color.c_str();
+        return it->second.mColor.c_str();
     return sNoColor;
 }
 

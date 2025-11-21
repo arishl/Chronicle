@@ -2,13 +2,11 @@
 // Created by Aris Lemmenes on 11/15/25.
 //
 #include "../../include/AsyncLogger/LogMessage.hpp"
-LogMessage::LogMessage(const LogLevel level, const char* message, const uint32_t threadID) :
-        mThreadID {threadID}, mLevel {level}
+LogMessage::LogMessage(const LogLevel aLevel, const char* aMessage, const ThreadID aThreadID) :
+        mThreadID {aThreadID}, mLevel {aLevel}
 {
-
-    std::strncpy(mMessage, message, sizeof(mMessage) - 1);
+    std::strncpy(mMessage, aMessage, sizeof(mMessage) - 1);
     mMessage[sizeof(mMessage) - 1] = '\0';
-
     mTimestamp =
         std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()

@@ -8,9 +8,9 @@
 #include "../../include/AsyncLogger/AsyncLogger.hpp"
 
 
-AsyncLogger::AsyncLogger(const std::string& aFilename)
+AsyncLogger::AsyncLogger(const FileName& aFilename)
 {
-    mFD = ::open(aFilename.c_str(),
+    mFD = open(aFilename.c_str(),
                  O_WRONLY | O_CREAT | O_APPEND,
                  0644);
 
@@ -20,14 +20,14 @@ AsyncLogger::AsyncLogger(const std::string& aFilename)
     }
 
     mRunning = true;
-    mAllocator.allocate(100, 64);
+    mBuffer.allocate(mAllocator);
 }
 
 AsyncLogger::~AsyncLogger()
 {
     stop();
     if (mFD >= 0) {
-        ::close(mFD);
+        close(mFD);
     }
 }
 
@@ -42,7 +42,7 @@ bool AsyncLogger::log(const LogMessage& aLogMessage)
     return cPushed;
 }
 
-bool AsyncLogger::log(const LogLevel aLevel, const char* aMessage, const uint32_t aThreadID)
+bool AsyncLogger::log(const LogLevel aLevel, const char* aMessage, const ThreadID aThreadID)
 {
     const LogMessage cMsg(aLevel, aMessage, aThreadID);
     const bool cPushed = log(cMsg);
@@ -130,7 +130,6 @@ void AsyncLogger::worker_loop()
             char cTS[32];
             const size_t cTSLen = format_timestamp(cTS, cMsg.mTimestamp);
             const char* cLevelStr = LogLevel::to_string(cMsg.mLevel);
-            const char* cLevelColor = LogLevel::color_of(cMsg.mLevel);
             Line& cLine = cLocalBuffer.emplace_back();
             const int n = std::snprintf(
                 cLine.mData,
@@ -152,13 +151,13 @@ void AsyncLogger::worker_loop()
             {
                 cBig.append(l.mData, l.mLen);
             }
-            ::write(mFD, cBig.data(), cBig.size());
+            write(mFD, cBig.data(), cBig.size());
             cLocalBuffer.clear();
             cBatchBytes = 0;
         }
         if (!cGotMsg)
         {
-            std::unique_lock<std::mutex> lock(mMTX);
+            std::unique_lock lock(mMTX);
             mCV.wait(lock, [&] {
                 return !mBuffer.empty() || !mRunning;
             });
