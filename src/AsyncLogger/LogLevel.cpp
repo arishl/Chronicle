@@ -12,7 +12,7 @@ struct LevelInfo {
     std::string color;
 };
 
-static std::unordered_map<LogLevel::LevelID, LevelInfo> registry = {
+static std::unordered_map<LogLevel::LevelID, LevelInfo> sRegistry = {
     {0, {"[TRACE]", "\033[37m"}},  // white
     {1, {"[DEBUG]", "\033[36m"}},  // cyan
     {2, {"[INFO]",  "\033[32m"}},  // green
@@ -20,27 +20,27 @@ static std::unordered_map<LogLevel::LevelID, LevelInfo> registry = {
     {4, {"[ERROR]", "\033[31m"}},  // red
 };
 
-void LogLevel::register_level(const LevelType value, const std::string& name)
+void LogLevel::register_level(const LevelType aValue, const std::string& aName)
 {
-    registry[value] = {std::move(name)};
+    sRegistry[aValue] = {std::move(aName)};
 }
 
-const char* LogLevel::to_string(const LogLevel value)
+const char* LogLevel::to_string(const LogLevel aValue)
 {
     static const char* unknown = "[UNKNOWN]";
 
-    if (const auto it = registry.find(value.mValue); it != registry.end())
+    if (const auto it = sRegistry.find(aValue.mValue); it != sRegistry.end())
         return it->second.name.c_str();
 
     return unknown;
 }
 
-const char* LogLevel::color_of(const LogLevel v)
+const char* LogLevel::color_of(const LogLevel aValue)
 {
-    static const char* no_color = "";
-    if (const auto it = registry.find(v.mValue); it != registry.end())
+    static auto sNoColor = "";
+    if (const auto it = sRegistry.find(aValue.mValue); it != sRegistry.end())
         return it->second.color.c_str();
-    return no_color;
+    return sNoColor;
 }
 
 LogLevel LogLevel::TRACE {0, "[TRACE]"};

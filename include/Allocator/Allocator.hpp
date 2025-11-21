@@ -8,10 +8,19 @@
 class Allocator
 {
 public:
-    void Allocate(unsigned long aNumBytes, unsigned long aAlignment);
-    void* Free
+    explicit Allocator(int aBufferSize);
+    ~Allocator();
+    Allocator(const Allocator&) = delete;
+    Allocator (const Allocator&&) = delete;
+    void* allocate(int aAllocationSize, int aAlignment);
+    void reset();
 private:
-
+    void* mBufferOffestPtr {nullptr};
+    void* mBufferStartPtr {nullptr};
+    unsigned long mTotalSize;
+    unsigned long mUsedAmount {0};
 };
+
+
 
 #endif //LFRBLOGGING_ALLOCATOR_H

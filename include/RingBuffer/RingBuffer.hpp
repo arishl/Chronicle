@@ -32,14 +32,16 @@ enum class WaitPolicy
 template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
 class RingBuffer
 {
-
 public:
-    template <class AllocationType>
-    void Allocate(AllocationType& aAllocation);
-    bool IsAllocated() const;
-    template <class AllocationType>
-    void Free(AllocationType& aAllocation);
-
+    template <class AllocatorType>
+    void allocate(AllocatorType& aAllocator);
+    bool is_allocated() const;
+    template <class AllocatorType>
+    void free(AllocatorType& aAllocator);
+    template <typename... Args>
+    bool emplace(Args&& ...aArgs);
+    bool pop(Datatype& aPoppedData);
+    bool empty() const noexcept;
 private:
     static constexpr size_t sAlign = 64;
 
@@ -49,13 +51,18 @@ private:
     alignas(sAlign) std::byte* mStorage = nullptr;
 
     int mIndexEnd;
+
+    int bump_index(int aIndex) const;
+
+    void increase_size(int aNumPushed);
+    void decrease_size(int aNumPopped);
 };
 
 template <typename DataType, WaitPolicy WaitPolicy, size_t Capacity>
-template <class AllocationType>
-void RingBuffer<DataType, WaitPolicy, Capacity>::Allocate(AllocationType& aAllocation)
+template <class AllocatorType>
+void RingBuffer<DataType, WaitPolicy, Capacity>::allocate(AllocatorType& aAllocator)
 {
-    if (IsAllocated())
+    if (is_allocated())
     {
         throw std::runtime_error("This memory has already been allocated");
     }
@@ -66,7 +73,7 @@ void RingBuffer<DataType, WaitPolicy, Capacity>::Allocate(AllocationType& aAlloc
 
     auto cNumBytes = Capacity * sizeof(DataType);
     static constexpr auto sAlignment = std::max(sAlign, alignof(DataType));
-    mStorage = aAllocation.Allocate(cNumBytes, sAlignment);
+    mStorage = static_cast<std::byte*>(aAllocator.allocate(cNumBytes, sAlignment));
     if (mStorage == nullptr)
     {
         throw std::runtime_error("Memory allocation failed!");
@@ -79,16 +86,87 @@ void RingBuffer<DataType, WaitPolicy, Capacity>::Allocate(AllocationType& aAlloc
 }
 
 template <typename T, WaitPolicy WaitPolicy, size_t Capacity>
-bool RingBuffer<T, WaitPolicy, Capacity>::IsAllocated() const
+bool RingBuffer<T, WaitPolicy, Capacity>::is_allocated() const
 {
     return (mStorage != nullptr);
 }
 
 template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
-template <class AllocationType>
-void RingBuffer<Datatype, WaitPolicy, Capacity>::Free(AllocationType& aAllocation)
+template <class AllocatorType>
+void RingBuffer<Datatype, WaitPolicy, Capacity>::free(AllocatorType& aAllocator)
 {
+    if (!is_allocated())
+    {
+        throw std::runtime_error("no memory to free...");
+    }
+    aAllocator.reset();
+}
 
+template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
+template <typename ... ArgTypes>
+bool RingBuffer<Datatype, WaitPolicy, Capacity>::emplace(ArgTypes&&... aArgs)
+{
+    const int cUnwrappedPushIndex {mPushIndex.load(std::memory_order::relaxed)};
+    const int cUnwrappedPopIndex {mPopIndex.load(std::memory_order::acquire)};
+    const int cIndexDelta = cUnwrappedPushIndex - cUnwrappedPopIndex;
+    if ((cIndexDelta == Capacity) || (cIndexDelta == (Capacity - mIndexEnd)))
+    {
+        return false;
+    }
+    const unsigned long cPushIndex = cUnwrappedPushIndex % Capacity;
+    std::byte* cAddress = mStorage + cPushIndex * sizeof(Datatype);
+    new (cAddress) Datatype(std::forward<ArgTypes>(aArgs)...);
+    auto cNewPushIndex = bump_index(cUnwrappedPushIndex);
+    mPushIndex.store(cNewPushIndex, std::memory_order::release);
+    increase_size(1);
+    return true;
+}
+
+template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
+bool RingBuffer<Datatype, WaitPolicy, Capacity>::pop(Datatype& aPoppedData)
+{
+    const int cUnwrappedPushIndex {mPushIndex.load(std::memory_order::relaxed)};
+    const int cUnwrappedPopIndex {mPopIndex.load(std::memory_order::acquire)};
+    if (cUnwrappedPushIndex == cUnwrappedPopIndex)
+    {
+        return false;
+    }
+    const unsigned long cPopIndex = cUnwrappedPopIndex % Capacity;
+    std::byte* cAddress = mStorage + cPopIndex * sizeof(Datatype);
+    Datatype* cData = std::launder(reinterpret_cast<Datatype*>(cAddress));
+    aPoppedData = std::move(*cData);
+    cData->~Datatype();
+    const int cNewPopIndex = bump_index(cUnwrappedPopIndex);
+    mPopIndex.store(cNewPopIndex, std::memory_order::release);
+    decrease_size(1);
+    return true;
+}
+
+template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
+bool RingBuffer<Datatype, WaitPolicy, Capacity>::empty() const noexcept
+{
+    return mSize.load(std::memory_order::acquire) == 0;
+}
+
+template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
+int RingBuffer<Datatype, WaitPolicy, Capacity>::bump_index(int aIndex) const
+{
+    const int cIncrIndex = aIndex + 1;
+    return (cIncrIndex < mIndexEnd) ? cIncrIndex : 0;
+}
+
+template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
+void RingBuffer<Datatype, WaitPolicy, Capacity>::increase_size(const int aNumPushed)
+{
+    static constexpr auto sOrder = std::memory_order::relaxed;
+    [[maybe_unused]] auto cPriorSize = mSize.fetch_add(aNumPushed, sOrder);
+}
+
+template <typename Datatype, WaitPolicy WaitPolicy, size_t Capacity>
+void RingBuffer<Datatype, WaitPolicy, Capacity>::decrease_size(const int aNumPopped)
+{
+    static constexpr auto sOrder = std::memory_order::relaxed;
+    [[maybe_unused]] auto cPriorSize = mSize.fetch_sub(aNumPopped, sOrder);
 }
 
 #endif //LFRBLOGGING_RINGBUFFER_H

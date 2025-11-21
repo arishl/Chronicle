@@ -4,7 +4,6 @@ project(LFRBLogging)
 set(CMAKE_CXX_STANDARD 23)
 
 add_executable(LFRBLogging demo.cpp
-        ../src/RingBuffer/RingBuffer.tpp
         ../include/RingBuffer/RingBuffer.hpp
         ../include/AsyncLogger/AsyncLogger.hpp
         ../src/AsyncLogger/AsyncLogger.cpp

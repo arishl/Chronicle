@@ -8,9 +8,8 @@
 #include "LogLevel.hpp"
 #include <chrono>
 
-class LogMessage
+struct LogMessage
 {
-public:
     LogMessage() = default;
     LogMessage(const LogLevel level, const char* message, const uint32_t threadID);
     uint64_t mTimestamp;

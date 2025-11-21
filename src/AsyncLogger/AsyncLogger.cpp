@@ -8,9 +8,9 @@
 #include "../../include/AsyncLogger/AsyncLogger.hpp"
 
 
-AsyncLogger::AsyncLogger(const std::string& filename) : buffer_()
+AsyncLogger::AsyncLogger(const std::string& aFilename)
 {
-    mFD = ::open(filename.c_str(),
+    mFD = ::open(aFilename.c_str(),
                  O_WRONLY | O_CREAT | O_APPEND,
                  0644);
 
@@ -20,6 +20,7 @@ AsyncLogger::AsyncLogger(const std::string& filename) : buffer_()
     }
 
     mRunning = true;
+    mAllocator.allocate(100, 64);
 }
 
 AsyncLogger::~AsyncLogger()
@@ -30,21 +31,24 @@ AsyncLogger::~AsyncLogger()
     }
 }
 
-bool AsyncLogger::log(const LogMessage& logMessage)
+bool AsyncLogger::log(const LogMessage& aLogMessage)
 {
-    const bool pushed = buffer_.push(logMessage);
-    if (pushed)
+    bool cPushed {true};
+    cPushed = mBuffer.emplace(aLogMessage);
+    if (cPushed)
+    {
         mCV.notify_one();
-    return pushed;
+    }
+    return cPushed;
 }
 
-bool AsyncLogger::log(const LogLevel level, const char* message, const uint32_t threadID)
+bool AsyncLogger::log(const LogLevel aLevel, const char* aMessage, const uint32_t aThreadID)
 {
-    const LogMessage msg(level, message, threadID);
-    const bool pushed = log(msg);
-    if (pushed)
+    const LogMessage cMsg(aLevel, aMessage, aThreadID);
+    const bool cPushed = log(cMsg);
+    if (cPushed)
         mCV.notify_one();
-    return pushed;
+    return cPushed;
 }
 
 void AsyncLogger::start()
@@ -65,8 +69,8 @@ size_t AsyncLogger::format_timestamp(char* out, uint64_t timestampMS)
 {
     using namespace std::chrono;
 
-    const auto tp = time_point<system_clock, milliseconds>(milliseconds(timestampMS));
-    std::time_t t = system_clock::to_time_t(tp);
+    const auto cTP = time_point<system_clock, milliseconds>(milliseconds(timestampMS));
+    std::time_t t = system_clock::to_time_t(cTP);
 
     std::tm tm {};
 #if defined(_WIN32)
@@ -75,7 +79,7 @@ size_t AsyncLogger::format_timestamp(char* out, uint64_t timestampMS)
     localtime_r(&t, &tm);
 #endif
 
-    int n = std::snprintf(
+    const int cPrintable = std::snprintf(
         out,
         32,
         "%04d-%02d-%02d %02d:%02d:%02d.%03llu",
@@ -88,92 +92,80 @@ size_t AsyncLogger::format_timestamp(char* out, uint64_t timestampMS)
         static_cast<unsigned long long>(timestampMS % 1000)
     );
 
-    return static_cast<size_t>(n);
+    return static_cast<size_t>(cPrintable);
 }
 
-void AsyncLogger::worker_final_check(std::vector<Line>& localBuffer) const
+void AsyncLogger::worker_final_check(std::vector<Line>& aLocalBuffer) const
 {
-    if (!localBuffer.empty())
+    if (!aLocalBuffer.empty())
     {
-        std::string big;
-        size_t capacity = 0;
-        for (auto& [len, data] : localBuffer)
+        std::string cBig;
+        size_t cCapacity = 0;
+        for (auto& [len, data] : aLocalBuffer)
         {
-            capacity += len;
+            cCapacity += len;
         }
-        big.reserve(capacity);
-        for (auto& [len, data] : localBuffer)
+        cBig.reserve(cCapacity);
+        for (auto& [len, data] : aLocalBuffer)
         {
-            big.append(data, len);
+            cBig.append(data, len);
         }
-        ::write(mFD, big.data(), big.size());
+        ::write(mFD, cBig.data(), cBig.size());
     }
 }
 
 void AsyncLogger::worker_loop()
 {
     static constexpr size_t MAX_BATCH_BYTES = 32 * 1024;
-    std::vector<Line> local_buffer;
-    local_buffer.reserve(512);
-    size_t batch_bytes = 0;
-    while (mRunning || !buffer_.empty() || !local_buffer.empty())
+    std::vector<Line> cLocalBuffer;
+    cLocalBuffer.reserve(512);
+    size_t cBatchBytes = 0;
+    while (mRunning || !mBuffer.empty() || !cLocalBuffer.empty())
     {
-        LogMessage msg {};
-        const bool got_msg = buffer_.pop(msg);
-        if (got_msg)
+        LogMessage cMsg {};
+        bool cGotMsg = true;
+        cGotMsg = mBuffer.pop(cMsg);
+        if (cGotMsg)
         {
-            char ts[32];
-            const size_t ts_len = format_timestamp(ts, msg.mTimestamp);
-            const char* level_str = LogLevel::to_string(msg.mLevel);
-            const char* level_color = LogLevel::color_of(msg.mLevel);
-            Line& line = local_buffer.emplace_back();
-            /**
+            char cTS[32];
+            const size_t cTSLen = format_timestamp(cTS, cMsg.mTimestamp);
+            const char* cLevelStr = LogLevel::to_string(cMsg.mLevel);
+            const char* cLevelColor = LogLevel::color_of(cMsg.mLevel);
+            Line& cLine = cLocalBuffer.emplace_back();
             const int n = std::snprintf(
-                line.data,
-                sizeof(line.data),
-                "%.*s %s%s\033[0m [T%u] %s\n",
-                static_cast<int>(ts_len),
-                ts,
-                level_color,
-                level_str,
-                msg.thread_id_,
-                msg.message_
-            );
-            **/
-            const int n = std::snprintf(
-                line.data,
-                sizeof(line.data),
+                cLine.mData,
+                sizeof(cLine.mData),
                 "%.*s %s [T%u] %s\n",
-                static_cast<int>(ts_len), ts,
-                level_str,
-                msg.thread_id_,
-                msg.mMessage
+                static_cast<int>(cTSLen), cTS,
+                cLevelStr,
+                cMsg.mThreadID,
+                cMsg.mMessage
             );
-            line.len = static_cast<uint16_t>(n);
-            batch_bytes += n;
+            cLine.mLen = static_cast<uint16_t>(n);
+            cBatchBytes += n;
         }
-        if (const bool batch_full = batch_bytes >= MAX_BATCH_BYTES; !local_buffer.empty() && (batch_full || (!mRunning && buffer_.empty())))
+        if (const bool cBatchFull = cBatchBytes >= MAX_BATCH_BYTES; !cLocalBuffer.empty() && (cBatchFull || (!mRunning && mBuffer.empty())))
         {
-            std::string big;
-            big.reserve(batch_bytes);
-            for (auto& l : local_buffer)
+            std::string cBig;
+            cBig.reserve(cBatchBytes);
+            for (auto& l : cLocalBuffer)
             {
-                big.append(l.data, l.len);
+                cBig.append(l.mData, l.mLen);
             }
-            ::write(mFD, big.data(), big.size());
-            local_buffer.clear();
-            batch_bytes = 0;
+            ::write(mFD, cBig.data(), cBig.size());
+            cLocalBuffer.clear();
+            cBatchBytes = 0;
         }
-        if (!got_msg)
+        if (!cGotMsg)
         {
             std::unique_lock<std::mutex> lock(mMTX);
             mCV.wait(lock, [&] {
-                return !buffer_.empty() || !mRunning;
+                return !mBuffer.empty() || !mRunning;
             });
         }
     }
 
-    worker_final_check(local_buffer);
+    worker_final_check(cLocalBuffer);
 
 }
 

@@ -17,8 +17,8 @@ public:
     {
         register_level(value, name);
     }
-    static void register_level(LevelType value, const std::string& name);
-    static const char* to_string(LogLevel value);
+    static void register_level(LevelType aValue, const std::string& aName);
+    static const char* to_string(LogLevel aValue);
     static const char* color_of(LogLevel value);
 
     static LogLevel TRACE;
