@@ -24,9 +24,7 @@ public:
     ~AsyncLogger();
     bool log(const LogMessage& aLogMessage);
     bool log(LogLevel aLevel, const char* aMessage, ThreadID aThreadID);
-    void start();
     void stop();
-
 private:
     using Thread = std::thread;
     using Mutex = std::mutex;
@@ -50,6 +48,7 @@ private:
         char formatted[32] = {0};
     };
 
+    void start();
     static size_t format_timestamp(char* out, uint64_t aTimestampMS);
     void worker_final_check(std::vector<Line>& aLocalBuffer) const;
     void worker_loop();

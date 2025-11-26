@@ -14,14 +14,12 @@ AsyncLogger::AsyncLogger(const FileName& aFilename)
     mFD = open(aFilename.c_str(),
                  O_WRONLY | O_CREAT | O_APPEND,
                  0644);
-
     if (mFD < 0)
     {
         throw std::runtime_error("Failed to open log file");
     }
-
-    mRunning = true;
     mBuffer.allocate(mAllocator);
+    start();
 }
 
 AsyncLogger::~AsyncLogger()
@@ -54,8 +52,11 @@ bool AsyncLogger::log(const LogLevel aLevel, const char* aMessage, const ThreadI
 
 void AsyncLogger::start()
 {
-    mRunning = true;
-    mWorker = std::thread(&AsyncLogger::worker_loop, this);
+    if (mRunning == false)
+    {
+        mRunning = true;
+        mWorker = std::thread(&AsyncLogger::worker_loop, this);
+    }
 }
 
 void AsyncLogger::stop()
