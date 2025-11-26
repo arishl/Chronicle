@@ -13,6 +13,7 @@
 #include "LogLevel.hpp"
 #include "LogMessage.hpp"
 #include "../Allocator/Allocator.hpp"
+#include <thread>
 
 class AsyncLogger
 {
@@ -37,18 +38,31 @@ private:
     LogMessage mCurrentMessage{};
     Thread mWorker;
     AtomicBool mRunning{false};
-    Mutex mMTX;
-    ConditionVariable mCV;
+    AtomicBool mHasData{false};
 
     struct Line {
         using Length = uint32_t;
         Length mLen;
         char mData[512];
     };
+    struct CachedTime {
+        uint64_t second = 0;
+        char formatted[32] = {0};
+    };
 
-    static size_t format_timestamp(char* out, uint64_t timestampMS);
+    static size_t format_timestamp(char* out, uint64_t aTimestampMS);
     void worker_final_check(std::vector<Line>& aLocalBuffer) const;
     void worker_loop();
 };
+
+inline size_t write_int(char* aOut, uint32_t aValue, const int aWidth)
+{
+    for (int i = aWidth - 1; i >= 0; --i)
+    {
+        aOut[i] = '0' + (aValue % 10);
+        aValue /= 10;
+    }
+    return aWidth;
+}
 
 #endif //LFRBLOGGING_ASYNCLOGGER_H

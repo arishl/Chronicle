@@ -4,6 +4,7 @@
 #include <fstream>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/uio.h>
 
 #include "../../include/AsyncLogger/AsyncLogger.hpp"
 
@@ -33,11 +34,10 @@ AsyncLogger::~AsyncLogger()
 
 bool AsyncLogger::log(const LogMessage& aLogMessage)
 {
-    bool cPushed {true};
-    cPushed = mBuffer.emplace(aLogMessage);
+    const bool cPushed {mBuffer.emplace(aLogMessage)};
     if (cPushed)
     {
-        mCV.notify_one();
+        mHasData.store(true, std::memory_order_release);
     }
     return cPushed;
 }
@@ -46,8 +46,9 @@ bool AsyncLogger::log(const LogLevel aLevel, const char* aMessage, const ThreadI
 {
     const LogMessage cMsg(aLevel, aMessage, aThreadID);
     const bool cPushed = log(cMsg);
-    if (cPushed)
-        mCV.notify_one();
+    {
+        mHasData.store(true, std::memory_order_release);
+    }
     return cPushed;
 }
 
@@ -60,39 +61,49 @@ void AsyncLogger::start()
 void AsyncLogger::stop()
 {
     mRunning = false;
-    mCV.notify_one();
     if (mWorker.joinable())
         mWorker.join();
 }
 
-size_t AsyncLogger::format_timestamp(char* out, uint64_t timestampMS)
+size_t AsyncLogger::format_timestamp(char* aOut, uint64_t aTimestampMS)
 {
-    using namespace std::chrono;
+    // thread-local cached time per thread
+    thread_local CachedTime cCachedTime;
 
-    const auto cTP = time_point<system_clock, milliseconds>(milliseconds(timestampMS));
-    std::time_t t = system_clock::to_time_t(cTP);
+    const uint64_t seconds = aTimestampMS / 1000;
+    const uint64_t ms      = aTimestampMS % 1000;
 
-    std::tm tm {};
+    if (cCachedTime.second != seconds)
+    {
+        cCachedTime.second = seconds;
+
+        auto t = static_cast<time_t>(seconds);
+        std::tm tm {};
 #if defined(_WIN32)
-    localtime_s(&tm, &t);
+        localtime_s(&tm, &t);
 #else
-    localtime_r(&t, &tm);
+        localtime_r(&t, &tm);
 #endif
 
-    const int cPrintable = std::snprintf(
-        out,
-        32,
-        "%04d-%02d-%02d %02d:%02d:%02d.%03llu",
-        tm.tm_year + 1900,
-        tm.tm_mon + 1,
-        tm.tm_mday,
-        tm.tm_hour,
-        tm.tm_min,
-        tm.tm_sec,
-        static_cast<unsigned long long>(timestampMS % 1000)
-    );
+        char* p = cCachedTime.formatted;
+        p += write_int(p, tm.tm_year + 1900, 4); *p++ = '-';
+        p += write_int(p, tm.tm_mon + 1, 2);    *p++ = '-';
+        p += write_int(p, tm.tm_mday, 2);       *p++ = ' ';
+        p += write_int(p, tm.tm_hour, 2);       *p++ = ':';
+        p += write_int(p, tm.tm_min, 2);        *p++ = ':';
+        p += write_int(p, tm.tm_sec, 2);
+        *p = '\0';
+    }
 
-    return static_cast<size_t>(cPrintable);
+    char* p = out;
+    const char* src = cCachedTime.formatted;
+    while (*src)
+        *p++ = *src++;
+
+    *p++ = '.';
+    p += write_int(p, static_cast<uint32_t>(ms), 3);
+
+    return p - out;
 }
 
 void AsyncLogger::worker_final_check(std::vector<Line>& aLocalBuffer) const
@@ -123,8 +134,7 @@ void AsyncLogger::worker_loop()
     while (mRunning || !mBuffer.empty() || !cLocalBuffer.empty())
     {
         LogMessage cMsg {};
-        bool cGotMsg = true;
-        cGotMsg = mBuffer.pop(cMsg);
+        const bool cGotMsg = mBuffer.pop(cMsg);
         if (cGotMsg)
         {
             char cTS[32];
@@ -145,22 +155,33 @@ void AsyncLogger::worker_loop()
         }
         if (const bool cBatchFull = cBatchBytes >= MAX_BATCH_BYTES; !cLocalBuffer.empty() && (cBatchFull || (!mRunning && mBuffer.empty())))
         {
-            std::string cBig;
-            cBig.reserve(cBatchBytes);
-            for (auto& l : cLocalBuffer)
-            {
-                cBig.append(l.mData, l.mLen);
+            std::vector<iovec> cIOVec;
+            cIOVec.reserve(cLocalBuffer.size());
+            for (auto& [mLen, mData] : cLocalBuffer) {
+                iovec ioVec {};
+                ioVec.iov_base = mData;
+                ioVec.iov_len  = mLen;
+                cIOVec.push_back(ioVec);
             }
-            write(mFD, cBig.data(), cBig.size());
+            writev(mFD, cIOVec.data(), static_cast<int>(cIOVec.size()));
             cLocalBuffer.clear();
             cBatchBytes = 0;
         }
         if (!cGotMsg)
         {
-            std::unique_lock lock(mMTX);
-            mCV.wait(lock, [&] {
-                return !mBuffer.empty() || !mRunning;
-            });
+            if (!mHasData.load(std::memory_order_acquire))
+            {
+                for (int i = 0; i < 100; ++i)
+                {
+                    if (mHasData.load(std::memory_order_acquire))
+                        break;
+
+                    asm volatile("pause");
+                }
+                if (!mHasData.load(std::memory_order_acquire))
+                    std::this_thread::sleep_for(std::chrono::microseconds(30));
+            }
+            continue;
         }
     }
 

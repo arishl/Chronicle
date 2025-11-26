@@ -3,7 +3,7 @@
 //
 #include "../../include/AsyncLogger/LogMessage.hpp"
 LogMessage::LogMessage(const LogLevel aLevel, const char* aMessage, const ThreadID aThreadID) :
-        mThreadID {aThreadID}, mLevel {aLevel}
+        mThreadID {aThreadID}, mLevel {aLevel}, mMessage{}
 {
     std::strncpy(mMessage, aMessage, sizeof(mMessage) - 1);
     mMessage[sizeof(mMessage) - 1] = '\0';
