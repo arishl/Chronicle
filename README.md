@@ -1,7 +1,8 @@
 # Chronicle: Multi-Producer, Single-Consumer Ring Buffer for Asynchronous Logging
 
 A high-performance, lock-free ring buffer implemented in modern C++.  
-Designed to support multiple concurrent producers and a single consumer, optimized for low-latency asynchronous logging workloads.
+Designed to support multiple concurrent producers and a single consumer,
+optimized for low-latency asynchronous logging workloads.
 
 ### Features
 

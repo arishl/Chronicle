@@ -6,14 +6,13 @@
 #define LFRBLOGGING_ASYNCBENCHMARKER_H
 
 
-class AsyncBenchmarker
-{
+class AsyncBenchmarker {
 public:
     static bool benchmark_async();
     static bool benchmark_generic();
     static bool benchmark_all();
-private:
 
+private:
 };
 
 

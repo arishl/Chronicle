@@ -1,16 +1,24 @@
-cmake_minimum_required(VERSION 4.0)
-project(LFRBLogging)
+cmake_minimum_required(VERSION 3.16)
+project(LFRBLogging LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(LFRBLogging demo.cpp
-        ../include/RingBuffer/RingBuffer.hpp
-        ../include/AsyncLogger/AsyncLogger.hpp
+# Simple libraries
+add_library(allocator STATIC ../src/Allocator/Allocator.cpp)
+target_include_directories(allocator PUBLIC ../include)
+
+add_library(asynclogger STATIC
         ../src/AsyncLogger/AsyncLogger.cpp
-        ../benchmarks/AsyncBenchmarker.cpp
-        ../benchmarks/AsyncBenchmarker.hpp
         ../src/AsyncLogger/LogLevel.cpp
-        ../include/AsyncLogger/LogLevel.hpp
         ../src/AsyncLogger/LogMessage.cpp
-        ../include/Allocator/Allocator.hpp
-        ../src/Allocator/Allocator.cpp)
+)
+target_include_directories(asynclogger PUBLIC ../include)
+target_link_libraries(asynclogger PUBLIC allocator)
+
+# Example
+add_executable(LFRBLogging demo.cpp ../benchmarks/AsyncBenchmarker.cpp)
+target_include_directories(LFRBLogging PRIVATE ../include)
+target_link_libraries(LFRBLogging PRIVATE asynclogger allocator)
+

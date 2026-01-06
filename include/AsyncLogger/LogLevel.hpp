@@ -29,5 +29,4 @@ private:
 };
 
 
-
 #endif //LFRBLOGGING_LOGLEVEL_H

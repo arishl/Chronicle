@@ -1,7 +1,6 @@
 #include "../benchmarks/AsyncBenchmarker.hpp"
 
-int main()
-{
+int main() {
     AsyncBenchmarker::benchmark_all();
     return 0;
 }
