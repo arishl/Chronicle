@@ -30,7 +30,7 @@ private:
     using AtomicBool = std::atomic<bool>;
     using ConditionVariable = std::condition_variable;
     Allocator mAllocator{1048576};
-    RingBuffer<LogMessage, WaitPolicy::NoWaits, 1000> mBuffer{};
+    RingBuffer<LogMessage> mBuffer{1024};
     int mFD;
     LogMessage mCurrentMessage{};
     Thread mWorker;

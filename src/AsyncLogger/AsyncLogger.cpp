@@ -16,7 +16,6 @@ AsyncLogger::AsyncLogger(const FileName& aFilename) {
     if (mFD < 0) {
         throw std::runtime_error("Failed to open log file");
     }
-    mBuffer.allocate(mAllocator);
     start();
 }
 
@@ -28,7 +27,7 @@ AsyncLogger::~AsyncLogger() {
 }
 
 bool AsyncLogger::log(const LogMessage& aLogMessage) {
-    const bool cPushed{mBuffer.emplace(aLogMessage)};
+    const bool cPushed{mBuffer.push(aLogMessage)};
     if (cPushed) {
         mHasData.store(true, std::memory_order_release);
     }
@@ -122,7 +121,7 @@ void AsyncLogger::worker_loop() {
     std::vector<Line> cLocalBuffer;
     cLocalBuffer.reserve(512);
     size_t cBatchBytes = 0;
-    while (mRunning || !mBuffer.empty() || !cLocalBuffer.empty()) {
+    while (mRunning || !mBuffer.is_empty() || !cLocalBuffer.empty()) {
         LogMessage cMsg{};
         const bool cGotMsg = mBuffer.pop(cMsg);
         if (cGotMsg) {
@@ -144,7 +143,7 @@ void AsyncLogger::worker_loop() {
         }
         if (const bool cBatchFull = cBatchBytes >= MAX_BATCH_BYTES; !
             cLocalBuffer.empty() && (cBatchFull || (!mRunning && mBuffer.
-                empty()))) {
+                is_empty()))) {
             std::vector<iovec> cIOVec;
             cIOVec.reserve(cLocalBuffer.size());
             for (auto& [mLen, mData] : cLocalBuffer) {

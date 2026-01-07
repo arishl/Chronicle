@@ -20,8 +20,9 @@ public:
     RingBuffer& operator=(const RingBuffer&) = delete;
     RingBuffer& operator=(RingBuffer&&) = delete;
 
-    [[nodiscard]] std::optional<DataType> pop() noexcept;
+    [[nodiscard]] bool pop(DataType& aData) noexcept;
     bool push(const DataType& aData) noexcept;
+    [[nodiscard]] bool is_empty() const;
 private:
     size_t mCapacity;
     size_t mMaxIndex;
@@ -43,13 +44,14 @@ RingBuffer<DataType>::~RingBuffer() {
 }
 
 template <typename DataType>
-std::optional<DataType> RingBuffer<DataType>::pop() noexcept {
+bool RingBuffer<DataType>::pop(DataType& aData) noexcept {
     const auto cRead = mRead.load(std::memory_order_relaxed);
-    const auto cWrite = mWrite.load(std::memory_order_relaxed);
-    if (cRead == cWrite) {
-        return std::nullopt;
+    if (const auto cWrite = mWrite.load(std::memory_order_relaxed); cRead == cWrite) {
+        return false;
     }
-    return std::make_optional(mBuffer[cRead & mMaxIndex]);
+    mRead.store(cRead+1, std::memory_order_relaxed);
+    aData = mBuffer[cRead & mMaxIndex];
+    return true;
 }
 
 template <typename DataType>
@@ -67,6 +69,14 @@ bool RingBuffer<DataType>::push(const DataType& aData) noexcept{
             return true;
         }
     }
+}
+
+template <typename DataType>
+bool RingBuffer<DataType>::is_empty() const {
+    if (mRead.load(std::memory_order_relaxed)==mWrite.load(std::memory_order_relaxed)) {
+        return true;
+    }
+    return false;
 }
 
 
