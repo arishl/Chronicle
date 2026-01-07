@@ -9,11 +9,11 @@
 #include "../include/AsyncLogger/LogLevel.hpp"
 
 bool AsyncBenchmarker::benchmark_async() {
-    AsyncLogger logger("async_log.txt");
+    AsyncLogger logger{"async_log.txt"};
     const LogLevel AUDIT{32, "[AUDIT]"};
     const LogLevel SQLITE{35, "[SQLITE]"};
-    const auto start_async = std::chrono::high_resolution_clock::now();
-    std::thread t1([&] {
+    const auto start_async { std::chrono::high_resolution_clock::now()};
+    std::thread t1{[&] {
         for (int i = 0; i < 50; ++i) {
             LogMessage msg(AUDIT, "Async log message", i);
             LogMessage msg1(LogLevel::TRACE, "Async log message", i);
@@ -26,10 +26,10 @@ bool AsyncBenchmarker::benchmark_async() {
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-    });
+    }};
     t1.join();
     logger.stop();
-    auto end_async = std::chrono::high_resolution_clock::now();
+    auto end_async { std::chrono::high_resolution_clock::now()};
     auto async_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         end_async - start_async).count();
     std::cout << "Async logging took: " << async_ms << " ms\n";
