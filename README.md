@@ -12,5 +12,4 @@ optimized for low-latency asynchronous logging workloads.
 
 ### Requirements
 
-- C++20 or later (C++23 recommended)
-- A modern compiler with support for `<atomic>` and lock-free operations
+- C++23
