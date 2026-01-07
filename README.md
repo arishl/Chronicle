@@ -1,15 +1,6 @@
-# Chronicle: Multi-Producer, Single-Consumer Ring Buffer for Asynchronous Logging
+# Chronicle
 
-A high-performance, lock-free ring buffer implemented in modern C++.  
-Designed to support multiple concurrent producers and a single consumer,
-optimized for low-latency asynchronous logging workloads.
+Chronicle is a high-performance, lock-free logging library for C++ designed for multi-threaded systems.
+It allows multiple producer threads to emit log messages concurrently while a dedicated consumer thread asynchronously writes them to disk.
 
-### Features
-
-- **Lock-free design** for minimal contention
-- **Cache-friendly memory layout**
-- **Ideal for async logging systems**
-
-### Requirements
-
-- C++23
+Chronicle is built around a lock-free MPSC ring buffer.
