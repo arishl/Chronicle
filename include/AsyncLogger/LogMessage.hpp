@@ -8,15 +8,15 @@
 #include "LogLevel.hpp"
 #include <chrono>
 
-struct LogMessage {
+struct alignas(64) LogMessage {
     using TimeStamp = uint64_t;
     using ThreadID = uint32_t;
     LogMessage() = default;
     LogMessage(LogLevel aLevel, const char* aMessage, ThreadID aThreadID);
     TimeStamp mTimestamp;
+    char mMessage[256];
     ThreadID mThreadID;
     LogLevel mLevel;
-    char mMessage[256];
 };
 
 #endif //LFRBLOGGING_LOGMESSAGE_H
