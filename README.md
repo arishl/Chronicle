@@ -8,7 +8,6 @@ optimized for low-latency asynchronous logging workloads.
 
 - **Lock-free design** for minimal contention
 - **Cache-friendly memory layout**
-- **Custom allocator support**
 - **Ideal for async logging systems**
 
 ### Requirements
