@@ -2,6 +2,7 @@
 // Created by Aris Lemmenes on 11/15/25.
 //
 #include "../../include/AsyncLogger/LogMessage.hpp"
+#include <chrono>
 
 LogMessage::LogMessage(const LogLevel aLevel, const char* aMessage,
                        const ThreadID aThreadID) :

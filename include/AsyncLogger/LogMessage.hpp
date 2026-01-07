@@ -6,7 +6,6 @@
 #define LFRBLOGGING_LOGMESSAGE_H
 
 #include "LogLevel.hpp"
-#include <chrono>
 
 struct alignas(64) LogMessage {
     using TimeStamp = uint64_t;

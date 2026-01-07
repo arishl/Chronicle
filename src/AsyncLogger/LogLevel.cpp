@@ -30,14 +30,14 @@ void LogLevel::register_level(const LevelType aValue, const LevelName& aName) {
 }
 
 const char* LogLevel::to_string(const LogLevel aValue) {
-    static auto sUnknown = "[UNKNOWN]";
+    static auto sUnknown { "[UNDEFINED]" };
     if (const auto it = sRegistry.find(aValue.mValue); it != sRegistry.end())
         return it->second.mName.c_str();
     return sUnknown;
 }
 
 const char* LogLevel::color_of(const LogLevel aValue) {
-    static auto sNoColor = "";
+    static auto sNoColor {""};
     if (const auto it = sRegistry.find(aValue.mValue); it != sRegistry.end())
         return it->second.mColor.c_str();
     return sNoColor;

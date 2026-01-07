@@ -1,24 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
-project(LFRBLogging LANGUAGES CXX)
+project(Chronicle LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Simple libraries
-add_library(allocator STATIC ../src/Allocator/Allocator.cpp)
-target_include_directories(allocator PUBLIC ../include)
+# Examples/demos for Chronicle logging library
 
-add_library(asynclogger STATIC
-        ../src/AsyncLogger/AsyncLogger.cpp
-        ../src/AsyncLogger/LogLevel.cpp
-        ../src/AsyncLogger/LogMessage.cpp
+add_executable(ChronicleDemo
+        demo.cpp
+        ../benchmarks/AsyncBenchmarker.cpp
 )
-target_include_directories(asynclogger PUBLIC ../include)
-target_link_libraries(asynclogger PUBLIC allocator)
 
-# Example
-add_executable(LFRBLogging demo.cpp ../benchmarks/AsyncBenchmarker.cpp)
-target_include_directories(LFRBLogging PRIVATE ../include)
-target_link_libraries(LFRBLogging PRIVATE asynclogger allocator)
+target_link_libraries(ChronicleDemo PRIVATE Chronicle::chronicle)
+
+install(TARGETS ChronicleDemo DESTINATION ${CMAKE_INSTALL_BINDIR})
 

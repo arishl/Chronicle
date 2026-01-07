@@ -12,7 +12,6 @@
 #include <chrono>
 #include "LogLevel.hpp"
 #include "LogMessage.hpp"
-#include "../Allocator/Allocator.hpp"
 
 class AsyncLogger {
 public:
@@ -29,7 +28,6 @@ private:
     using Mutex = std::mutex;
     using AtomicBool = std::atomic<bool>;
     using ConditionVariable = std::condition_variable;
-    Allocator mAllocator{1048576};
     RingBuffer<LogMessage> mBuffer{1024};
     int mFD;
     LogMessage mCurrentMessage{};

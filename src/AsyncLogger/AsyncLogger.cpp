@@ -58,7 +58,6 @@ void AsyncLogger::stop() {
 }
 
 size_t AsyncLogger::format_timestamp(char* aOut, uint64_t aTimestampMS) {
-    // thread-local cached time per thread
     thread_local CachedTime cCachedTime;
 
     const uint64_t seconds = aTimestampMS / 1000;
